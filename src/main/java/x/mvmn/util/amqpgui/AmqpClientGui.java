@@ -9,6 +9,7 @@ import java.io.UnsupportedEncodingException;
 
 import javax.swing.BorderFactory;
 import javax.swing.JButton;
+import javax.swing.JComboBox;
 import javax.swing.JOptionPane;
 import javax.swing.JPanel;
 import javax.swing.JScrollPane;
@@ -50,6 +51,7 @@ public class AmqpClientGui extends JPanel {
 	protected JTextArea txPublishText = new JTextArea("Hello");
 	protected final JButton btnPublish = new JButton("Publish");
 	protected final JButton btnPublishMultiple = new JButton("Publish multiple");
+	protected JComboBox<Integer> cbPublishDeliveryMode = new JComboBox<Integer>(new Integer[] { 1, 2 });
 
 	protected JTextField tfQueueName = new JTextField("queue");
 	protected DefaultConsumer consumer;
@@ -151,6 +153,7 @@ public class AmqpClientGui extends JPanel {
 		JPanel pnlPublishTop = new JPanel(new BorderLayout());
 		pnlPublish.add(pnlPublishTop, BorderLayout.NORTH);
 		pnlPublishTop.add(txPublishTopic, BorderLayout.CENTER);
+		pnlPublishTop.add(cbPublishDeliveryMode, BorderLayout.EAST);
 		pnlPublish.add(new JScrollPane(txPublishText), BorderLayout.CENTER);
 		JPanel pnlSouth = new JPanel(new GridLayout(1, 2));
 		pnlSouth.add(btnPublish);
@@ -163,11 +166,12 @@ public class AmqpClientGui extends JPanel {
 					public void run() throws Exception {
 						final String exchange = txExchange.getText().trim();
 						final String topic = txPublishTopic.getText().trim();
+						final int deliveryMode = cbPublishDeliveryMode.getSelectedIndex() + 1;
 						byte[] payload = txPublishText.getText().getBytes("UTF-8");
 						logOnSwingEdt("Publishing...");
 						try {
 							Channel channel = client.createChannel();
-							channel.basicPublish(exchange, topic, null, payload);
+							channel.basicPublish(exchange, topic, new BasicProperties.Builder().deliveryMode(deliveryMode).build(), payload);
 							logOnSwingEdt("Message published successfully.");
 						} catch (Throwable e) {
 							logOnSwingEdt("Message publish failed: " + StackTraceUtil.toString(e));
@@ -199,6 +203,7 @@ public class AmqpClientGui extends JPanel {
 						public void run() throws Exception {
 							final String exchange = txExchange.getText().trim();
 							final String topic = txPublishTopic.getText().trim();
+							final int deliveryMode = cbPublishDeliveryMode.getSelectedIndex() + 1;
 							String payload = txPublishText.getText();
 							logOnSwingEdt("Publishing multiple...");
 							try {
@@ -207,7 +212,8 @@ public class AmqpClientGui extends JPanel {
 									String topicWithCount = topic.replace("$counter", String.valueOf(i));
 									String payloadWithCount = payload.replace("$counter", String.valueOf(i));
 									logOnSwingEdt("Publishing message " + (i + 1) + " of " + finalCount + "...");
-									channel.basicPublish(exchange, topicWithCount, null, payloadWithCount.getBytes("UTF-8"));
+									channel.basicPublish(exchange, topicWithCount, new BasicProperties.Builder().deliveryMode(deliveryMode).build(),
+											payloadWithCount.getBytes("UTF-8"));
 									logOnSwingEdt("Message published successfully.");
 								}
 							} catch (Throwable e) {
